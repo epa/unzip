@@ -13,13 +13,13 @@
 #ifndef __unzvers_h     /* don't include more than once */
 #define __unzvers_h
 
-#ifdef BETA
-#  undef BETA           /* undefine BETA for public releases */
+#ifndef BETA
+#  define BETA          /* undefine BETA for public releases */
 #endif
 
 #ifdef BETA
-#  define UZ_BETALEVEL      "h03 BETA"
-#  define UZ_VERSION_DATE   "17 Apr 09"         /* internal beta version */
+#  define UZ_BETALEVEL      "i01 BETA"
+#  define UZ_VERSION_DATE   "19 Aug 09"         /* internal beta version */
 #else
 #  define UZ_BETALEVEL      ""
 #  define UZ_VERSION_DATE   "20 April 2009"     /* official release version */

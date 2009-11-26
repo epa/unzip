@@ -1785,7 +1785,12 @@ static int find_vms_attrs(__GPRO__ int set_date_time)
                         break;
                     case ATR$C_UIC:
                     case ATR$C_ADDACLENT:
+/* SMSx. */
+#if 0
                         skip = !uO.X_flag;
+#endif /* 0 */
+                        skip = (uO.X_flag <= 0);
+/* SMSx. */
                         break;
                     case ATR$C_CREDATE:
                     case ATR$C_REVDATE:
@@ -2817,9 +2822,14 @@ static int _close_rms(__GPRO)
         outfab->fab$l_xab = (void *)xabdat;
     }
 
+/* SMSx. */
+    if ( uO.X_flag >= 0 )
+    {
+/* SMSx. */
+
     if (xabpro != NULL)
     {
-        if ( !uO.X_flag )
+        if ( uO.X_flag == 0 )
             xabpro->xab$l_uic = 0;    /* Use default (user's) uic */
         xabpro->xab$l_nxt = outfab->fab$l_xab;
         outfab->fab$l_xab = (void *) xabpro;
@@ -2831,6 +2841,10 @@ static int _close_rms(__GPRO)
         pro.xab$l_nxt = outfab->fab$l_xab;
         outfab->fab$l_xab = (void *) &pro;
     }
+
+/* SMSx. */
+    }
+/* SMSx. */
 
     status = sys$wait(outrab);
     if (ERR(status))
@@ -3171,9 +3185,15 @@ int set_direc_attribs(__G__ d)
                 pka_atr[pka_idx].atr$l_addr = GVTC &xabdat->xab$q_cdt;
                 ++pka_idx;
             }
+
+/* SMSx. */
+            if ( uO.X_flag >= 0 )
+            {
+/* SMSx. */
+
             if (xabpro != NULL)
             {
-                if ( uO.X_flag ) {
+                if ( uO.X_flag > 0 ) {
                     pka_atr[pka_idx].atr$w_size = 4;
                     pka_atr[pka_idx].atr$w_type = ATR$C_UIC;
                     pka_atr[pka_idx].atr$l_addr = GVTC &xabpro->xab$l_uic;
@@ -3194,6 +3214,11 @@ int set_direc_attribs(__G__ d)
             pka_atr[pka_idx].atr$w_type = ATR$C_FPRO;
             pka_atr[pka_idx].atr$l_addr = GVTC &attr;
             ++pka_idx;
+
+/* SMSx. */
+            }
+/* SMSx. */
+
         }
     }
     else
@@ -3202,6 +3227,11 @@ int set_direc_attribs(__G__ d)
          * non-VMS attribute data.
          */
         pka_idx = 0;
+
+/* SMSx. */
+        if ( uO.X_flag >= 0 )
+        {
+/* SMSx. */
 
         /* Get the (already converted) non-VMS permissions. */
         attr = VmsAtt(d)->perms;        /* Use right-sized prot storage. */
@@ -3216,6 +3246,10 @@ int set_direc_attribs(__G__ d)
         pka_atr[pka_idx].atr$w_type = ATR$C_FPRO;
         pka_atr[pka_idx].atr$l_addr = GVTC &attr;
         ++pka_idx;
+
+/* SMSx. */
+        }
+/* SMSx. */
 
         /* Restore directory date-time if user requests it (-D). */
         if (uO.D_flag <= 0)
@@ -5160,6 +5194,14 @@ int check_for_newer(__G__ filenam)   /* return 1 if existing file newer or */
 }
 
 
+/* Declare __posix_exit() if <stdlib.h> won't, and we use it. */
+
+#if __CRTL_VER >= 70000000 && !defined(_POSIX_EXIT)
+#  if !defined( NO_POSIX_EXIT)
+void     __posix_exit     (int __status);
+#  endif /* !defined( NO_POSIX_EXIT) */
+#endif /* __CRTL_VER >= 70000000 && !defined(_POSIX_EXIT) */
+
 
 #ifdef RETURN_CODES
 void return_VMS(__G__ err)
@@ -5170,6 +5212,10 @@ void return_VMS(err)
     int err;
 {
     int severity;
+
+#if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000)
+    char *sh_ptr;
+#endif /* !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000) */
 
 #ifdef RETURN_CODES
 /*---------------------------------------------------------------------------
@@ -5291,6 +5337,23 @@ void return_VMS(err)
  *
   ---------------------------------------------------------------------------*/
 
+#if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000)
+
+    /* If the environment variable "SHELL" is defined, and not defined
+     * as "DCL" (by GNV "bash", for example), then use __posix_exit() to
+     * exit with the raw, UNIX-like status code.
+     */
+    sh_ptr = getenv( "SHELL");
+    if ((sh_ptr != NULL) && strcasecmp( sh_ptr, "DCL"))
+    {
+        __posix_exit( err);
+    }
+    else
+
+#endif /* #if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000) */
+
+    {
+
 /* Official HP-assigned Info-ZIP UnZip Facility code. */
 #define FAC_IZ_UZP 1954   /* 0x7A2 */
 
@@ -5300,25 +5363,56 @@ void return_VMS(err)
     */
 #  define CTL_FAC_IZ_UZP ((0x1 << 12) | FAC_IZ_UZP)
 #  define MSG_FAC_SPEC 0x8000   /* Facility-specific code. */
-#else /* CTL_FAC_IZ_UZP */
+#else /* ndef CTL_FAC_IZ_UZP */
    /* Use the user-supplied Control+Facility code for err or warn. */
 #  ifndef MSG_FAC_SPEC          /* Old default is not Facility-specific. */
 #    define MSG_FAC_SPEC 0x0    /* Facility-specific code.  Or 0x8000. */
-#  endif /* !MSG_FAC_SPEC */
-#endif /* ?CTL_FAC_IZ_ZIP */
+#  endif /* ndef MSG_FAC_SPEC */
+#endif /* ndef CTL_FAC_IZ_UZP [else] */
 #define VMS_UZ_FAC_BITS       ((CTL_FAC_IZ_UZP << 16) | MSG_FAC_SPEC)
 
-    severity = (err == PK_WARN) ? 0 :                           /* warn  */
-               (err == PK_ERR ||                                /* error */
-                (err >= PK_NOZIP && err <= PK_FIND) ||          /*  ...  */
-                (err >= IZ_CTRLC && err <= IZ_BADPWD)) ? 2 :    /*  ...  */
-               4;                                               /* fatal */
+        severity = (err == PK_OK) ? STS$K_SUCCESS :             /* success */
+                   (err == PK_WARN) ? STS$K_WARNING :           /* warning */
+                   (err == PK_ERR ||                            /* error */
+                    (err >= PK_NOZIP && err <= PK_FIND) ||      /*  ...  */
+                    (err >= IZ_CTRLC && err <= IZ_BADPWD)) ?    /*  ...  */
+                    STS$K_ERROR :                               /*  ...  */
+                    STS$K_SEVERE;                               /* fatal */
 
-    exit(                                           /* $SEVERITY:            */
-         (err == PK_COOL) ? SS$_NORMAL :            /* success               */
-         (VMS_UZ_FAC_BITS | (err << 4) | severity)  /* warning, error, fatal */
+#ifndef OLD_STATUS
+
+        exit( VMS_UZ_FAC_BITS |                     /* Facility (+) */
+              (err << 4) |                          /* Message code */
+              severity);                            /* Severity */
+
+#else /* ndef OLD_STATUS */
+
+    /* 2007-01-17 SMS.
+     * Defining OLD_STATUS provides the same behavior as in UnZip versions
+     * before an official VMS Facility code had been assigned, which
+     * means that Success (ZE_OK) gives a status value of 1 (SS$_NORMAL)
+     * with no Facility code, while any error or warning gives a status
+     * value which includes a Facility code.  (Curiously, under the old
+     * scheme, message codes were left-shifted by 4 instead of 3,
+     * resulting in all-even message codes.)  I don't like this, but I
+     * was afraid to remove it, as someone, somewhere may be depending
+     * on it.  Define CTL_FAC_IZ_UZP as 0x7FFF to get the old behavior.
+     * Define only OLD_STATUS to get the old behavior for Success
+     * (ZE_OK), but using the official HP-assigned Facility code for an
+     * error or warning.  Define MSG_FAC_SPEC to get the desired
+     * behavior.
+     *
+     * Exit with simple SS$_NORMAL for ZE_OK.  Otherwise, exit with code
+     * comprising Control, Facility, Message, and Severity.
+     */
+        exit( (err == PK_COOL) ? SS$_NORMAL :        /* Success */
+              (VMS_UZ_FAC_BITS |                     /* Facility */
+              (err << 4) |                           /* Message code */
+              severity)                              /* Severity */
         );
 
+#endif /* ndef OLD_STATUS [else] */
+    }
 } /* end function return_VMS() */
 
 

@@ -1767,7 +1767,11 @@ int uz_opts(__G__ pargc, pargv)
 #if (defined(RESTORE_UIDGID) || defined(RESTORE_ACL))
                 case ('X'):   /* restore owner/protection info (need privs?) */
                     if (negative) {
+/* SMSx. */
+#if 0
                         uO.X_flag = MAX(uO.X_flag-negative,0);
+#endif /* 0 */
+                        uO.X_flag = MAX(uO.X_flag-negative, -1);
                         negative = 0;
                     } else
                         ++uO.X_flag;

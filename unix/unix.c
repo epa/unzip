@@ -639,6 +639,12 @@ int mapname(__G__ renamed)
                   FnFilter1(G.filename)));
             }
 #ifndef NO_CHMOD
+
+/* SMSx. */
+            if (uO.X_flag >= 0)
+            {
+/* SMSx. */
+
             /* Filter out security-relevant attributes bits. */
             G.pInfo->file_attr = filtattr(__G__ G.pInfo->file_attr);
             /* When extracting non-UNIX directories or when extracting
@@ -647,7 +653,12 @@ int mapname(__G__ renamed)
              * maintained to allow files extracted into this new folder
              * to inherit the GID setting from the parent directory.
              */
+/* SMSx. */
+#if 0
             if (G.pInfo->hostnum != UNIX_ || !(uO.X_flag || uO.K_flag)) {
+#endif /* 0 */
+            if (G.pInfo->hostnum != UNIX_ || !((uO.X_flag > 0) || uO.K_flag)) {
+/* SMSx. */
                 /* preserve SGID bit when inherited from parent dir */
                 if (!SSTAT(G.filename, &G.statbuf)) {
                     G.pInfo->file_attr |= G.statbuf.st_mode & S_ISGID;
@@ -659,6 +670,11 @@ int mapname(__G__ renamed)
             /* set approx. dir perms (make sure can still read/write in dir) */
             if (chmod(G.filename, G.pInfo->file_attr | 0700))
                 perror("chmod (directory attributes) error");
+
+/* SMSx. */
+            }
+/* SMSx. */
+
 #endif
             /* set dir time (note trailing '/') */
             return (error & ~MPN_MASK) | MPN_CREATED_DIR;
@@ -1083,7 +1099,14 @@ static int get_extattribs(__G__ pzt, z_uidgid)
     /* if -X option was specified and we have UID/GID info, restore it */
     have_uidgid_flg =
 #ifdef RESTORE_UIDGID
+
+/* SMSx. */
+#if 0
             (uO.X_flag && (eb_izux_flg & EB_UX2_VALID));
+#endif /* 0 */
+            ((uO.X_flag > 0) && (eb_izux_flg & EB_UX2_VALID));
+/* SMSx. */
+
 #else
             0;
 #endif
@@ -1236,8 +1259,17 @@ void close_outfile(__G)    /* GRR: change to return PK-style warning level */
     zipfile.
   ---------------------------------------------------------------------------*/
 
+/* SMSx. */
+    if (uO.X_flag >= 0)
+    {
+/* SMSx. */
+
     if (fchmod(fileno(G.outfile), filtattr(__G__ G.pInfo->file_attr)))
         perror("fchmod (file attributes) error");
+
+/* SMSx. */
+    }
+/* SMSx. */
 
     fclose(G.outfile);
 #endif /* !NO_FCHOWN && !NO_FCHMOD */
@@ -1262,8 +1294,19 @@ void close_outfile(__G)    /* GRR: change to return PK-style warning level */
   ---------------------------------------------------------------------------*/
 
 #ifndef NO_CHMOD
+
+/* SMSx. */
+    if (uO.X_flag >= 0)
+    {
+/* SMSx. */
+
     if (chmod(G.filename, filtattr(__G__ G.pInfo->file_attr)))
         perror("chmod (file attributes) error");
+
+/* SMSx. */
+    }
+/* SMSx. */
+
 #endif
 #endif /* NO_FCHOWN || NO_FCHMOD */
 
@@ -1299,12 +1342,23 @@ int set_symlnk_attribs(__G__ slnk_entry)
       }
 # endif /* !NO_LCHOWN */
 # if (!defined(NO_LCHMOD))
+
+/* SMSx. */
+      if (uO.X_flag >= 0)
+      {
+/* SMSx. */
+
       TTrace((stderr,
         "set_symlnk_attribs:  restoring Unix attributes for\n        %s\n",
         FnFilter1(slnk_entry->fname)));
       if (lchmod(slnk_entry->fname,
                  filtattr(__G__ *(unsigned *)(zvoid *)slnk_entry->buf)))
           perror("lchmod (file attributes) error");
+
+/* SMSx. */
+      }
+/* SMSx. */
+
 # endif /* !NO_LCHMOD */
     }
     /* currently, no error propagation... */
@@ -1373,11 +1427,22 @@ int set_direc_attribs(__G__ d)
         }
     }
 #ifndef NO_CHMOD
+
+/* SMSx. */
+    if (uO.X_flag >= 0)
+    {
+/* SMSx. */
+
     if (chmod(d->fn, UxAtt(d)->perms)) {
         Info(slide, 0x201, ((char *)slide, DirlistChmodFailed,
           FnFilter1(d->fn), strerror(errno)));
         if (!errval)
             errval = PK_WARN;
+
+/* SMSx. */
+    }
+/* SMSx. */
+
     }
 #endif /* !NO_CHMOD */
     return errval;
